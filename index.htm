@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Deutsch–English Match Game (with Audio)</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --accent:#60a5fa;
+      --accent-2:#34d399;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji', sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 10% 10%, #0b1220, #0a0f1d 50%, #070b14 100%);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .app{
+      width: min(1100px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      max-height: calc(100vh - 48px);
+    }
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px; gap:12px;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(6px);
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+    }
+    .title{font-size:20px; font-weight:700; letter-spacing:.3px;}
+    .meta{display:flex; gap:10px; align-items:center; font-size:14px; color:var(--muted); flex-wrap:wrap}
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:6px 10px; border-radius:999px;
+      background:rgba(96,165,250,0.12); color:#cfe5ff; border:1px solid rgba(96,165,250,0.25);
+      white-space:nowrap;
+    }
+    .hearts{letter-spacing:4px; font-size:18px}
+    .btn{
+      background: var(--accent);
+      color:#07111f;
+      font-weight:700; border:none; border-radius:999px;
+      padding:10px 14px; cursor:pointer;
+      transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
+      box-shadow: 0 8px 20px rgba(96,165,250,0.35);
+    }
+    .btn:hover{transform: translateY(-1px)}
+    .btn.secondary{
+      background:transparent; color:var(--text);
+      border:1px solid rgba(255,255,255,0.16);
+      box-shadow:none;
+    }
+
+    .dataset{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    }
+    select, input[type="text"]{
+      background: rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.16);
+      color: var(--text);
+      border-radius: 10px;
+      padding:8px 10px;
+      outline: none;
+    }
+
+    .board-wrap{
+      position:relative;
+      flex: 1 1 auto;
+      overflow:hidden;
+      min-height: 300px;
+      overflow-y: scroll;
+    }
+    .board{
+      position:relative;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:0;
+      height:100%;
+    }
+    .col{
+      position:relative;
+      padding:18px 12px;
+      height:100%;
+      overflow-y:auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    .col::-webkit-scrollbar{ width:10px }
+    .col::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.12); border-radius:999px; border:2px solid transparent; background-clip: content-box }
+    .col h3{margin:0 0 12px; color:var(--muted); font-weight:600; font-size:14px; letter-spacing:.2px;}
+    ul.word-list{list-style:none; margin:0; padding:0 6px 0 0; display:flex; flex-direction:column; gap:10px}
+    li.word{
+      position:relative;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:14px; padding:12px 14px;
+      font-size:16px; cursor:pointer; user-select:none;
+      transition: transform .08s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+      box-shadow: inset 0 -30px 60px rgba(255,255,255,0.02);
+    }
+    li.word:hover{transform: translateY(-1px)}
+    li.word.selected{outline:2px solid var(--accent); border-color: rgba(96,165,250,0.6); box-shadow: 0 0 0 4px rgba(96,165,250,0.15)}
+    li.word.matched{background: linear-gradient(180deg, rgba(34,197,94,0.15), rgba(34,197,94,0.08)); border-color: rgba(34,197,94,0.6)}
+    li.word.disabled{opacity:.5; pointer-events:none}
+    .connector{position:absolute; inset:0; pointer-events:none;}
+    footer{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); color:var(--muted); font-size:14px;
+      flex: 0 0 auto;
+      flex-wrap:wrap;
+    }
+    .progress{display:flex; align-items:center; gap:10px}
+    .bar{
+      height:8px; width:160px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.10)
+    }
+    .bar > span{display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .3s ease}
+    .toast{
+      position:fixed; left:50%; top:20px; transform:translateX(-50%);
+      background:#0b1220; border:1px solid rgba(255,255,255,0.2); color:var(--text);
+      padding:10px 14px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.4);
+      opacity:0; pointer-events:none; transition:opacity .2s ease;
+    }
+    .toast.show{opacity:1}
+    .audio-pill{
+      background:rgba(52,211,153,0.12);
+      color:#d2f7e9; border:1px solid rgba(52,211,153,0.35);
+      cursor:pointer; user-select:none;
+    }
+
+    @media (max-width:780px){
+      .board{grid-template-columns:1fr; gap:10px}
+      .connector{display:none}
+      .app{max-height:none}
+      .board-wrap{overflow:visible}
+      .col{height:auto; overflow:visible}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Deutsch–English Match</div>
+
+      <div class="dataset">
+        <span class="pill">Dataset
+          <select id="datasetSelect" aria-label="Dataset select"></select>
+        </span>
+        <input id="datasetInput" type="text" placeholder="Add file e.g. words3.js" />
+        <button class="btn secondary" id="datasetAddBtn">Add</button>
+        <button class="btn secondary" id="datasetLoadBtn">Load</button>
+        <button class="btn secondary" id="datasetResetBtn" title="Clear saved datasets">Reset Datasets</button>
+      </div>
+
+      <div class="meta">
+        <span class="pill" id="levelPill">Level <strong id="levelIndex">1</strong>/<span id="levelMax">?</span></span>
+        <span class="pill">Matches <strong id="matchCount">0</strong>/<span id="matchTotal">0</span></span>
+        <span class="pill hearts" id="hearts" aria-live="polite">♥♥♥</span>
+        <span class="pill audio-pill" id="audioToggle" title="Toggle pronunciation">🔈 Audio: <strong id="audioState">On</strong></span>
+        <button class="btn secondary" id="restartBtn" title="Restart from the beginning">Restart</button>
+        <button class="btn" id="shuffleBtn" title="Shuffle this level">Shuffle</button>
+      </div>
+    </header>
+
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <div class="col" id="leftCol">
+          <h3>Deutsch (click to hear)</h3>
+          <ul id="leftList" class="word-list"></ul>
+        </div>
+        <svg id="connector" class="connector" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+        <div class="col" id="rightCol">
+          <h3>English</h3>
+          <ul id="rightList" class="word-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="progress">
+        <div class="bar"><span id="barFill"></span></div>
+        <div id="progressText">Ready?</div>
+      </div>
+      <div>Tip: Click a German word to select it (and hear it), then its English match. Wrong pairs cost a life.</div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---------------- Dataset Loader ----------------
+    const DATASET_KEY = 'de_en_match_datasets';
+    const LAST_KEY = 'de_en_match_last';
+
+    const datasetSelect   = document.getElementById('datasetSelect');
+    const datasetInput    = document.getElementById('datasetInput');
+    const datasetAddBtn   = document.getElementById('datasetAddBtn');
+    const datasetLoadBtn  = document.getElementById('datasetLoadBtn');
+    const datasetResetBtn = document.getElementById('datasetResetBtn');
+
+    // Only 'words2.js' as the built-in default.
+    const defaultDatasets = ['sentence1.js'];
+
+    // Merge saved + defaults, ensure defaults are present
+    const savedList = JSON.parse(localStorage.getItem(DATASET_KEY) || '[]');
+    const datasets = new Set([...savedList, ...defaultDatasets]);
+
+    let currentDatasetScript = null;
+
+    function persistDatasets(){
+      localStorage.setItem(DATASET_KEY, JSON.stringify(Array.from(datasets)));
+    }
+    function renderDatasetOptions(){
+      datasetSelect.innerHTML = '';
+      Array.from(datasets).forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        datasetSelect.appendChild(opt);
+      });
+    }
+    function addDataset(name){
+      if(!name) return;
+      const trimmed = name.trim();
+      if(!trimmed) return;
+      datasets.add(trimmed);
+      persistDatasets();
+      renderDatasetOptions();
+      datasetSelect.value = trimmed;
+    }
+
+    datasetAddBtn.addEventListener('click', ()=>{
+      addDataset(datasetInput.value);
+      datasetInput.value = '';
+      showToast('Added dataset to list');
+    });
+    datasetLoadBtn.addEventListener('click', ()=> loadDataset(datasetSelect.value));
+    datasetResetBtn.addEventListener('click', ()=>{
+      // Clear saved datasets and last-used pointer
+      localStorage.removeItem(DATASET_KEY);
+      localStorage.removeItem(LAST_KEY);
+      // Rebuild with only defaults
+      datasets.clear();
+      defaultDatasets.forEach(d=>datasets.add(d));
+      persistDatasets();
+      renderDatasetOptions();
+      datasetSelect.value = defaultDatasets[0];
+      loadDataset(defaultDatasets[0]);
+      showToast('Datasets reset');
+    });
+
+    renderDatasetOptions();
+
+    async function loadDataset(fileName){
+      if(!fileName) return;
+
+      // Remove previous script
+      if(currentDatasetScript){
+        try{ currentDatasetScript.remove(); }catch(e){}
+        currentDatasetScript = null;
+      }
+      // Reset global to avoid stale data
+      try{ delete window.LEVELS; }catch(e){ window.LEVELS = undefined; }
+
+      // Cache-bust to force fresh load even if file name is the same
+      const url = fileName + (fileName.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+
+      await new Promise((resolve, reject)=>{
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = resolve;
+        s.onerror = ()=> reject(new Error('Failed to load '+fileName));
+        document.body.appendChild(s);
+        currentDatasetScript = s;
+      }).catch(err=>{
+        showToast('Could not load dataset');
+        console.error(err);
+      });
+
+      if(!Array.isArray(window.LEVELS) || !window.LEVELS.length){
+        showToast('Dataset has no LEVELS');
+        return;
+      }
+      levelMaxEl.textContent = window.LEVELS.length;
+      state.lives = 3;
+      renderLives();
+      loadLevel(0);
+      localStorage.setItem(LAST_KEY, fileName); // remember last used
+      showToast('Loaded: ' + fileName);
+    }
+
+    // ---------------- Helpers / State ----------------
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
+    const shuffle = (arr) => arr.map(v=>[v,Math.random()]).sort((a,b)=>a[1]-b[1]).map(v=>v[0]);
+    const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
+    const showToast = (msg, ms=1300)=>{
+      const t = $('#toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'), ms);
+    };
+
+    // ---------------- Audio (SpeechSynthesis) ----------------
+    const audioPrefKey = 'de_en_match_audio';
+    let audioEnabled = (localStorage.getItem(audioPrefKey) ?? 'on') === 'on';
+    let selectedVoice = null;
+
+    const audioStateEl = $('#audioState');
+    const audioToggleEl = $('#audioToggle');
+
+    function updateAudioUI(){
+      audioStateEl.textContent = audioEnabled ? 'On' : 'Off';
+      audioToggleEl.style.opacity = audioEnabled ? '1' : '0.6';
+    }
+
+    function pickBestGermanVoice(voices){
+      const preferred = voices.filter(v => (v.lang || '').toLowerCase().startsWith('de'));
+      return preferred[0] || voices.find(v=>v.default) || null;
+    }
+    function initVoices(){
+      const got = window.speechSynthesis.getVoices();
+      if(got && got.length){ selectedVoice = pickBestGermanVoice(got); }
+      window.speechSynthesis.onvoiceschanged = ()=>{
+        const vs = window.speechSynthesis.getVoices();
+        selectedVoice = pickBestGermanVoice(vs);
+      };
+    }
+    function normalizeGermanLabel(label){
+      let t = label.replace(/\s*\/\s*/g, ' oder ');
+      t = t.replace(/\([^)]*\)/g, '').replace(/\s{2,}/g,' ').trim();
+      return t;
+    }
+    function speakGerman(text){
+      if(!audioEnabled) return;
+      if(!('speechSynthesis' in window)) return;
+      const utter = new SpeechSynthesisUtterance(normalizeGermanLabel(text));
+      utter.lang = 'de-DE';
+      if(selectedVoice) utter.voice = selectedVoice;
+      try { window.speechSynthesis.cancel(); } catch(e){}
+      window.speechSynthesis.speak(utter);
+    }
+    audioToggleEl.addEventListener('click', ()=>{
+      audioEnabled = !audioEnabled;
+      localStorage.setItem(audioPrefKey, audioEnabled ? 'on' : 'off');
+      updateAudioUI();
+      showToast(audioEnabled ? 'Audio On' : 'Audio Off');
+    });
+    initVoices();
+    updateAudioUI();
+
+    // ---------------- Game State / Elements ----------------
+    let state = {
+      level: 0,
+      lives: 3,
+      leftOrder: [],
+      rightOrder: [],
+      selectedLeft: null,
+      matches: new Set(),
+      lines: [],
+    };
+
+    const levelIdxEl = $('#levelIndex');
+    const levelMaxEl = $('#levelMax');
+    const heartsEl = $('#hearts');
+    const matchCountEl = $('#matchCount');
+    const matchTotalEl = $('#matchTotal');
+    const barFillEl = $('#barFill');
+    const progressTextEl = $('#progressText');
+    const connectorSVG = $('#connector');
+    const leftList = $('#leftList');
+    const rightList = $('#rightList');
+    const boardEl = $('#board');
+    const leftCol = $('#leftCol');
+    const rightCol = $('#rightCol');
+    const restartBtn = $('#restartBtn');
+    const shuffleBtn = $('#shuffleBtn');
+
+    function renderLives(){
+      const max = 3;
+      heartsEl.textContent = '♥'.repeat(state.lives) + '♡'.repeat(Math.max(0, max - state.lives));
+    }
+
+    // Keep a single scroll listener; throttle with rAF
+    let scrollListenersAttached = false;
+
+    function loadLevel(idx){
+      state.level = idx;
+      state.matches = new Set();
+      state.lines = [];
+      state.selectedLeft = null;
+
+      const level = window.LEVELS[idx];
+      const pairs = level.pairs;
+      const leftItems = pairs.map((p, i)=> ({ label: p.de, pair:i }));
+      const rightItems = pairs.map((p, i)=> ({ label: p.en, pair:i }));
+
+      state.leftOrder = shuffle(leftItems);
+      state.rightOrder = shuffle(rightItems);
+
+      // Render lists
+      leftList.innerHTML = '';
+      rightList.innerHTML = '';
+      for(const item of state.leftOrder){
+        const li = document.createElement('li');
+        li.className = 'word';
+        li.textContent = item.label;
+        li.dataset.pair = item.pair;
+        li.setAttribute('role','button');
+        li.setAttribute('tabindex','0');
+        li.addEventListener('click', (e)=>{ onLeftClick(e); speakGerman(item.label); });
+        li.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); li.click(); }});
+        leftList.appendChild(li);
+      }
+      for(const item of state.rightOrder){
+        const li = document.createElement('li');
+        li.className = 'word';
+        li.textContent = item.label;
+        li.dataset.pair = item.pair;
+        li.setAttribute('role','button');
+        li.setAttribute('tabindex','0');
+        li.addEventListener('click', onRightClick);
+        li.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); li.click(); }});
+        rightList.appendChild(li);
+      }
+
+      // Update UI
+      matchTotalEl.textContent = pairs.length;
+      matchCountEl.textContent = 0;
+      barFillEl.style.width = '0%';
+      levelIdxEl.textContent = idx+1;
+      progressTextEl.textContent = `${level.name}`;
+
+      // Clear connectors
+      connectorSVG.innerHTML = '';
+
+      // Layout now and on scroll/resize
+      requestLayout();
+      if(!scrollListenersAttached){
+        leftCol.addEventListener('scroll', requestLayout, {passive:true});
+        rightCol.addEventListener('scroll', requestLayout, {passive:true});
+        window.addEventListener('resize', requestLayout, {passive:true});
+        scrollListenersAttached = true;
+      }
+    }
+
+    function onLeftClick(e){
+      const li = e.currentTarget;
+      if(li.classList.contains('matched')) return;
+      $$('.word.selected').forEach(n=> n.classList.remove('selected'));
+      li.classList.add('selected');
+      state.selectedLeft = li;
+    }
+
+    async function onRightClick(e){
+      const right = e.currentTarget;
+      if(right.classList.contains('matched')) return;
+      if(!state.selectedLeft){
+        showToast('Pick a German word first');
+        return;
+      }
+      const left = state.selectedLeft;
+      const pairL = parseInt(left.dataset.pair, 10);
+      const pairR = parseInt(right.dataset.pair, 10);
+
+      if(pairL === pairR){
+        left.classList.remove('selected');
+        left.classList.add('matched','disabled');
+        right.classList.add('matched','disabled');
+        state.matches.add(pairL);
+        drawLine(left, right, true);
+        updateProgress();
+        if(state.matches.size === window.LEVELS[state.level].pairs.length){
+          await sleep(400);
+          nextLevel();
+        }
+      } else {
+        drawLine(left, right, false);
+        left.classList.remove('selected');
+        state.selectedLeft = null;
+        loseLife();
+      }
+    }
+
+    function updateProgress(){
+      const total = window.LEVELS[state.level].pairs.length;
+      const done = state.matches.size;
+      matchCountEl.textContent = done;
+      const pct = (done/total)*100;
+      barFillEl.style.width = pct + '%';
+      progressTextEl.textContent = done === total ? 'Level complete!' : `Matched ${done} of ${total}`;
+    }
+
+    function loseLife(){
+      state.lives -= 1;
+      renderLives();
+      if(state.lives <= 0){
+        showToast('Out of lives — back to Level 1');
+        state.lives = 3;
+        renderLives();
+        loadLevel(0);
+      } else {
+        showToast(`Wrong pair! ${state.lives} ${state.lives===1?'life':'lives'} left.`);
+      }
+    }
+
+    function nextLevel(){
+      if(state.level < window.LEVELS.length - 1){
+        showToast('Great! Next level →');
+        loadLevel(state.level + 1);
+      } else {
+        showToast('🏆 You finished all levels! Starting over…', 1500);
+        state.lives = 3;
+        renderLives();
+        loadLevel(0);
+      }
+    }
+
+    // ---------------- Connectors ----------------
+    function ensureDefs(){
+      if($('#gradOK', connectorSVG)) return;
+      const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+
+      const gradOK = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+      gradOK.id = 'gradOK';
+      gradOK.setAttribute('x1','0%'); gradOK.setAttribute('y1','0%');
+      gradOK.setAttribute('x2','100%'); gradOK.setAttribute('y2','0%');
+      const stop1 = document.createElementNS('http://www.w3.org/2000/svg','stop'); stop1.setAttribute('offset','0%'); stop1.setAttribute('stop-color','#22c55e');
+      const stop2 = document.createElementNS('http://www.w3.org/2000/svg','stop'); stop2.setAttribute('offset','100%'); stop2.setAttribute('stop-color','#60a5fa');
+      gradOK.append(stop1, stop2);
+
+      const gradBAD = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+      gradBAD.id = 'gradBAD';
+      gradBAD.setAttribute('x1','0%'); gradBAD.setAttribute('y1','0%');
+      gradBAD.setAttribute('x2','100%'); gradBAD.setAttribute('y2','0%');
+      const s1 = document.createElementNS('http://www.w3.org/2000/svg','stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color','#ef4444');
+      const s2 = document.createElementNS('http://www.w3.org/2000/svg','stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color','#f59e0b');
+      gradBAD.append(s1, s2);
+
+      defs.append(gradOK, gradBAD);
+      connectorSVG.prepend(defs);
+    }
+
+    function getCenter(el){
+      const a = boardEl.getBoundingClientRect();
+      const b = el.getBoundingClientRect();
+      const x = (b.left - a.left) + b.width/2;
+      const y = (b.top - a.top) + b.height/2;
+      return {x,y};
+    }
+
+    function drawLine(leftEl, rightEl, isCorrect){
+      doLayoutNow(); // ensure SVG sized
+      const start = getCenter(leftEl);
+      const end = getCenter(rightEl);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', start.x);
+      line.setAttribute('y1', start.y);
+      line.setAttribute('x2', end.x);
+      line.setAttribute('y2', end.y);
+      line.setAttribute('stroke-width', 3);
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('stroke', isCorrect ? 'url(#gradOK)' : 'url(#gradBAD)');
+      line.style.opacity = '0';
+      line.style.transition = 'opacity .15s ease';
+      ensureDefs();
+      connectorSVG.appendChild(line);
+      requestAnimationFrame(()=>{ line.style.opacity = '1'; });
+      if(isCorrect){
+        state.lines.push({leftEl, rightEl, lineEl: line});
+      } else {
+        setTimeout(()=>{
+          line.style.opacity = '0';
+          setTimeout(()=> line.remove(), 200);
+        }, 350);
+      }
+    }
+
+    // Layout refresh throttled with rAF for smoothness
+    let layoutQueued = false;
+    function requestLayout(){
+      if(layoutQueued) return;
+      layoutQueued = true;
+      requestAnimationFrame(()=>{
+        layoutQueued = false;
+        doLayoutNow();
+      });
+    }
+    function doLayoutNow(){
+      const rect = boardEl.getBoundingClientRect();
+      connectorSVG.setAttribute('width', rect.width);
+      connectorSVG.setAttribute('height', rect.height);
+      connectorSVG.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+      // Reposition existing lines
+      for(const L of state.lines){
+        const s = getCenter(L.leftEl);
+        const e = getCenter(L.rightEl);
+        L.lineEl.setAttribute('x1', s.x);
+        L.lineEl.setAttribute('y1', s.y);
+        L.lineEl.setAttribute('x2', e.x);
+        L.lineEl.setAttribute('y2', e.y);
+      }
+    }
+
+    // ---------------- Buttons ----------------
+    restartBtn.addEventListener('click', ()=>{
+      state.lives = 3;
+      renderLives();
+      loadLevel(0);
+      showToast('Game reset to Level 1');
+    });
+    shuffleBtn.addEventListener('click', ()=>{
+      loadLevel(state.level);
+      showToast('Shuffled!');
+    });
+
+    // ---------------- Init ----------------
+    renderLives();
+
+    // Choose last used dataset if available; else default to words2.js
+    const last = localStorage.getItem(LAST_KEY);
+    const initial = last && datasets.has(last) ? last : defaultDatasets[0];
+    // Ensure the select shows the chosen item
+    datasetSelect.value = initial || defaultDatasets[0];
+    if(!datasetSelect.value){
+      // In case the option list isn't populated yet (edge cases)
+      renderDatasetOptions();
+      datasetSelect.value = initial || defaultDatasets[0];
+    }
+    // Finally load it
+    loadDataset(datasetSelect.value || defaultDatasets[0]);
+  </script>
+</body>
+</html>
