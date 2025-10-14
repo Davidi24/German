@@ -42,7 +42,7 @@
   .menu .list{display:grid; grid-template-columns:1fr; gap:6px; padding:0 4px 8px}
   .menu .item{
     width:100%; text-align:left;
-    background:rgba(255,255,255,.06); /* opaque enough so it doesn't look transparent */
+    background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.18); color:var(--text);
     padding:9px 12px; border-radius:10px; cursor:pointer;
   }
@@ -55,13 +55,42 @@
   .col::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px;border:2px solid transparent;background-clip:content-box}
   .col h3{margin:0 0 12px;color:var(--muted);font-weight:600;font-size:14px;letter-spacing:.2px}
   ul.word-list{list-style:none;margin:0;padding:0 6px 0 0;display:flex;flex-direction:column;gap:10px}
-  li.word{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px 14px;font-size:16px;cursor:pointer;user-select:none;transition:transform .08s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease;box-shadow:inset 0 -30px 60px rgba(255,255,255,.02)}
+  li.word{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px 38px 12px 14px;font-size:16px;cursor:pointer;user-select:none;transition:transform .08s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease;box-shadow:inset 0 -30px 60px rgba(255,255,255,.02)}
   li.word:hover{transform:translateY(-1px)}
   li.word.selected{outline:2px solid var(--accent);border-color:rgba(96,165,250,.6);box-shadow:0 0 0 4px rgba(96,165,250,.15)}
   li.word.disabled{opacity:.55;pointer-events:none}
   li.word.correct{background:linear-gradient(180deg,rgba(34,197,94,.15),rgba(34,197,94,.08));border-color:rgba(34,197,94,.6)}
   li.word.incorrect{background:linear-gradient(180deg,rgba(239,68,68,.15),rgba(239,68,68,.08));border-color:rgba(239,68,68,.6)}
   .connector{display:none}
+
+  /* --- NEW: info button + example popup --- */
+  .info-btn{
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    width:22px; height:22px; border-radius:50%;
+    background:rgba(96,165,250,.18); color:#cfe5ff;
+    border:1px solid rgba(96,165,250,.55);
+    font-size:12px; font-weight:800; line-height:22px; text-align:center;
+    cursor:pointer;
+  }
+  .info-btn:hover{background:rgba(96,165,250,.28); border-color:rgba(96,165,250,.8)}
+
+  .example-backdrop{
+    position:fixed; inset:0; background:transparent; display:none; z-index:9996;
+  }
+  .example-backdrop.open{display:block}
+
+  .example-popover{
+    position:fixed; display:none; z-index:9997;
+    min-width:280px; max-width:min(420px,90vw);
+    background:#0b1220; border:1px solid rgba(255,255,255,.18);
+    border-radius:12px; box-shadow:0 18px 40px rgba(0,0,0,.6);
+    padding:12px 14px;
+  }
+  .example-popover.open{display:block}
+  .ex-title{font-weight:700; margin-bottom:6px; color:#e8f0ff}
+  .ex-de{margin:6px 0 2px; font-style:italic}
+  .ex-en{margin:2px 0 0; color:var(--muted)}
+  /* --------------------------------------- */
 
   footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:14px;flex:0 0 auto;flex-wrap:wrap}
   .progress{display:flex;align-items:center;gap:10px}
@@ -124,9 +153,13 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- Backdrop & Menu rendered at body-level to avoid stacking issues -->
+  <!-- Backdrops/menus -->
   <div class="picker-backdrop" id="pickerBackdrop" aria-hidden="true"></div>
   <div class="menu" id="pickerMenu" role="menu" aria-label="Datasets"></div>
+
+  <!-- NEW: single popup + backdrop for examples -->
+  <div class="example-backdrop" id="exBackdrop" aria-hidden="true"></div>
+  <div class="example-popover" id="exPopover" role="dialog" aria-modal="true" aria-hidden="true"></div>
 
 <script>
   const INDEX_URL = 'index.json';
@@ -161,6 +194,10 @@
   const pickerLabel = $('#pickerLabel');
   const pickerMenu = $('#pickerMenu');
   const pickerBackdrop = $('#pickerBackdrop');
+
+  // NEW: example popup elements
+  const exBackdrop = $('#exBackdrop');
+  const exPopover  = $('#exPopover');
 
   let currentDatasetScript=null;
   let INDEX=null;
@@ -203,7 +240,6 @@
   }
 
   function openMenu(){
-    // place the menu under the button (portal-style, fixed)
     const r = pickerBtn.getBoundingClientRect();
     pickerMenu.style.left = r.left + 'px';
     pickerMenu.style.top  = (r.bottom + 8) + 'px';
@@ -263,6 +299,14 @@
       li.setAttribute('role','button'); li.setAttribute('tabindex','0');
       li.addEventListener('click', (e)=>{ onLeftClick(e); speakGerman(item.label); });
       li.addEventListener('keydown',(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); li.click(); }});
+
+      // NEW: info button in each left word
+      const info=document.createElement('button');
+      info.type='button'; info.className='info-btn'; info.textContent='ⓘ';
+      info.title='Show example sentence';
+      info.addEventListener('click',(ev)=>{ ev.stopPropagation(); openExampleForPair(item.pair, info); });
+      li.appendChild(info);
+
       leftList.appendChild(li);
     }
     for(const item of state.rightOrder){
@@ -356,6 +400,52 @@
     pickerLabel.textContent = (firstFile ? firstFile.replace(/^.*\//,'') : 'Choose set') + ' ▾';
     if(firstFile) loadDataset(firstFile);
   })();
+
+  /* ========== NEW: example popup logic ========== */
+  function escapeHtml(s){ return (s??'').toString().replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+  function openExampleForPair(pairIndex, anchorBtn){
+    const lvl = window.LEVELS[state.level];
+    const p   = (lvl && lvl.pairs && lvl.pairs[pairIndex]) || {};
+    const exDe = p.exDe || 'No example available.';
+    const exEn = p.exEn || '';
+    const title = p.de || '';
+
+    exPopover.innerHTML =
+      `<div class="ex-title">${escapeHtml(title)}</div>
+       <div class="ex-de">${escapeHtml(exDe)}</div>
+       ${exEn ? `<div class="ex-en">${escapeHtml(exEn)}</div>` : ''}`;
+
+    // position next to the button
+    const r = anchorBtn.getBoundingClientRect();
+    const margin = 8;
+    let left = Math.min(window.innerWidth - 20, r.right + margin);
+    let top  = Math.max(12, r.top - 6);
+
+    // if too close to right edge, place above/left
+    exPopover.style.left = left + 'px';
+    exPopover.style.top  = top + 'px';
+
+    exPopover.classList.add('open');
+    exPopover.setAttribute('aria-hidden','false');
+    exBackdrop.classList.add('open');
+
+    // close on outside click / Esc / scroll
+    const close = ()=> {
+      exBackdrop.classList.remove('open');
+      exPopover.classList.remove('open');
+      exPopover.setAttribute('aria-hidden','true');
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close, true);
+      exBackdrop.removeEventListener('click', close);
+    };
+    const onKey = (e)=>{ if(e.key==='Escape') close(); };
+
+    document.addEventListener('keydown', onKey, { once:false });
+    window.addEventListener('scroll', close, true);
+    exBackdrop.addEventListener('click', close, { once:true });
+  }
+  /* ============================================== */
 </script>
 </body>
 </html>
