@@ -45,26 +45,27 @@ window.LEVELS = [
       { de: "vielleicht", en: "maybe", exDe: "", exEn: "" }
     ]
   },
-  // {
-  //   name: "Level 4",
-  //   pairs: [
-  //     { de: "bekannt", en: "known, famous", exDe: "", exEn: "" },
-  //     { de: "leicht", en: "light, easy", exDe: "", exEn: "" },
-  //     { de: "vorstellen (sich)", en: "to imagine, introduce", exDe: "", exEn: "" },
-  //     { de: "suchen", en: "to search", exDe: "", exEn: "" },
-  //     { de: "Aufgabe, die", en: "task", exDe: "", exEn: "" },
-  //     { de: "schlecht", en: "bad", exDe: "", exEn: "" },
-  //     { de: "Raum, der", en: "room, space", exDe: "", exEn: "" },
-  //     { de: "Blick, der", en: "view, look", exDe: "", exEn: "" },
-  //     { de: "aussehen", en: "to look, appear", exDe: "", exEn: "" },
-  //     { de: "Gruppe, die", en: "group", exDe: "", exEn: "" }
-  //   ]
-  // },
+  {
+    name: "Level 4",
+    pairs: [
+      { de: "bekannt", en: "known, famous", exDe: "", exEn: "" },
+      { de: "leicht", en: "light, easy", exDe: "", exEn: "" },
+      { de: "vorstellen (sich)", en: "to imagine, introduce", exDe: "", exEn: "" },
+      { de: "suchen", en: "to search", exDe: "", exEn: "" },
+      { de: "Aufgabe, die", en: "task", exDe: "", exEn: "" },
+      { de: "schlecht", en: "bad", exDe: "", exEn: "" },
+      { de: "Raum, der", en: "room, space", exDe: "", exEn: "" },
+      { de: "Blick, der", en: "view, look", exDe: "", exEn: "" },
+      { de: "aussehen", en: "to look, appear", exDe: "", exEn: "" },
+      { de: "Gruppe, die", en: "group", exDe: "", exEn: "" },
+        { de: "Moment, der", en: "moment", exDe: "", exEn: "" },
+      { de: "Ort, der", en: "place", exDe: "", exEn: "" }
+    ]
+  },
   // {
   //   name: "Level 5",
   //   pairs: [
-  //     { de: "Moment, der", en: "moment", exDe: "", exEn: "" },
-  //     { de: "Ort, der", en: "place", exDe: "", exEn: "" },
+
   //     { de: "Ergebnis, das", en: "result", exDe: "", exEn: "" },
   //     { de: "Gespräch, das", en: "conversation", exDe: "", exEn: "" },
   //     { de: "schließen", en: "to close", exDe: "", exEn: "" },
